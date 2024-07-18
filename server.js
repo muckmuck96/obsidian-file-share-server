@@ -60,6 +60,8 @@ function handleFile(ws, data) {
       file: data.payload.file,
       aesKey: data.payload.aesKey,
       iv: data.payload.iv,
+      sender: data.payload.sender,
+      signature: data.payload.signature,
       name: ws.name
     }));
   }
