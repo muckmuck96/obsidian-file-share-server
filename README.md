@@ -3,7 +3,7 @@
 ## Installation
 
 ```
-docker run -dit -p 3000:3000 jloferer96/obsidian-fire-share-server:latest
+docker run -dit -p 3000:3000 jloferer96/obsidian-file-share-server:latest
 ```
 
 ## Summary
