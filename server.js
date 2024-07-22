@@ -33,6 +33,12 @@ wss.on('connection', (ws) => {
       case 'checkOnline':
         handleCheckOnline(ws, data);
         break;
+      case 'request':
+        handleRequest(ws, data);
+        break;
+      case 'response':
+        handleResponse(ws, data);
+        break;
     }
   });
 
@@ -62,7 +68,8 @@ function handleFile(ws, data) {
       iv: data.payload.iv,
       sender: data.payload.sender,
       signature: data.payload.signature,
-      name: ws.name
+      name: ws.name,
+      hash: data.hash
     }));
   }
 }
@@ -73,6 +80,28 @@ function handleCheckOnline(ws, data) {
     target: data.target,
     online: !!users[data.target]
   }));
+}
+
+function handleRequest(ws, data) {
+  if (users[data.target]) {
+    users[data.target].send(JSON.stringify({
+      type: 'request',
+      sender: ws.name,
+      filename: data.filename
+    }));
+  }
+}
+
+function handleResponse(ws, data) {
+  if (users[data.target]) {
+    users[data.target].send(JSON.stringify({
+      type: 'response',
+      from: ws.name,
+      accepted: data.accepted,
+      filename: data.filename,
+      hash: data.hash  
+    }));
+  }
 }
 
 server.listen(process.env.SOCKET_PORT, () => {
