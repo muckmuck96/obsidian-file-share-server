@@ -3,10 +3,11 @@ const https = require('https');
 const fs = require('fs');
 const WebSocket = require('ws');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 
 require("dotenv").config();
-
 
 let server = http.createServer(app);
 if (process.env.CERT_PEM_PATH && process.env.KEY_PEM_PATH) {
@@ -18,11 +19,40 @@ if (process.env.CERT_PEM_PATH && process.env.KEY_PEM_PATH) {
 
 const wss = new WebSocket.Server({ server });
 
-let users = {};  
+const limiter = rateLimit({
+  windowMs: process.env.RATE_LIMITER_WINDOW_MS,
+  max: process.env.RATE_LIMITER_MAX_REQUESTS,
+  message: 'To many requests, please try again later.'
+});
 
-wss.on('connection', (ws) => {
+app.use(limiter);
+
+app.get('/', (req, res) => {
+  res.redirect('https://muckmuck96.github.io/obsidian-file-share/');
+});
+
+let users = {};  
+const connectionCounts = {};
+const requestCounts = {};
+const maxConnectionsPerWindow = process.env.RATE_LIMITER_MAX_CONNECTIONS;
+const maxRequestsPerWindow = process.env.RATE_LIMITER_MAX_REQUESTS;
+const windowMs = process.env.RATE_LIMITER_WINDOW_MS;
+
+wss.on('connection', (ws, req) => {
+  const ip = req.socket.remoteAddress;
+
+  if(!rateLimitCheck(ip, connectionCounts, maxConnectionsPerWindow, 'To many connections')) {
+    ws.close(1008, 'To many connections');
+    return;
+  }
+
   ws.on('message', (message) => {
+    if(!rateLimitCheck(ip, requestCounts, maxRequestsPerWindow, 'To many requests')) {
+      return;
+    }
+
     const data = JSON.parse(message);
+
     switch(data.type) {
       case 'login':
         handleLogin(ws, data);
@@ -46,6 +76,27 @@ wss.on('connection', (ws) => {
     handleLogout(ws);
   });
 });
+
+function rateLimitCheck(ip, cache, max, message) {
+  if(!cache[ip]) {
+    cache[ip] = 1;
+  } else {
+    cache[ip]++;
+  }
+
+  if(cache[ip] > max) {
+    console.log(`Rate limit exceeded for ${ip}: ${message}`);
+    return false;
+  }
+
+  setTimeout(() => {
+    cache[ip]--;
+    if (cache[ip] === 0) {
+      delete cache[ip];
+    }
+  }, windowMs);
+  return true;
+}
 
 function handleLogin(ws, data) {
   users[data.name] = ws;
