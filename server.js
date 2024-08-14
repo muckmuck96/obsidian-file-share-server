@@ -3,7 +3,6 @@ const https = require('https');
 const fs = require('fs');
 const WebSocket = require('ws');
 const express = require('express');
-const rateLimit = require('express-rate-limit');
 
 const app = express();
 
@@ -18,14 +17,16 @@ if (process.env.CERT_PEM_PATH && process.env.KEY_PEM_PATH) {
 }
 
 const wss = new WebSocket.Server({ server });
+if (!process.env.USE_PROXY) {
+  const rateLimit = require('express-rate-limit');
+  const limiter = rateLimit({
+    windowMs: process.env.RATE_LIMITER_WINDOW_MS,
+    max: process.env.RATE_LIMITER_MAX_REQUESTS,
+    message: 'To many requests, please try again later.'
+  });
 
-const limiter = rateLimit({
-  windowMs: process.env.RATE_LIMITER_WINDOW_MS,
-  max: process.env.RATE_LIMITER_MAX_REQUESTS,
-  message: 'To many requests, please try again later.'
-});
-
-app.use(limiter);
+  app.use(limiter);
+}
 
 app.get('/', (req, res) => {
   res.redirect('https://muckmuck96.github.io/obsidian-file-share/');
@@ -78,6 +79,9 @@ wss.on('connection', (ws, req) => {
 });
 
 function rateLimitCheck(ip, cache, max, message) {
+  if (process.env.USE_PROXY) {
+    return true;
+  }
   if(!cache[ip]) {
     cache[ip] = 1;
   } else {
