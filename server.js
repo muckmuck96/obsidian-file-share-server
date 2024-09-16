@@ -142,7 +142,8 @@ function handleRequest(ws, data) {
     users[data.target].send(JSON.stringify({
       type: 'request',
       sender: ws.name,
-      filename: data.filename
+      filename: data.filename,
+      id: data.id
     }));
   }
 }
@@ -154,7 +155,8 @@ function handleResponse(ws, data) {
       from: ws.name,
       accepted: data.accepted,
       filename: data.filename,
-      hash: data.hash  
+      hash: data.hash,
+      id: data.id
     }));
   }
 }
