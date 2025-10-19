@@ -61,6 +61,12 @@ wss.on('connection', (ws, req) => {
       case 'file':
         handleFile(ws, data);
         break;
+      case 'fileMetadata':
+        handleFileMetadata(ws, data);
+        break;
+      case 'fileChunk':
+        handleFileChunk(ws, data);
+        break;
       case 'checkOnline':
         handleCheckOnline(ws, data);
         break;
@@ -124,7 +130,32 @@ function handleFile(ws, data) {
       sender: data.payload.sender,
       signature: data.payload.signature,
       name: ws.name,
-      hash: data.hash
+      hash: data.hash,
+      sourceFolderPath: data.sourceFolderPath
+    }));
+  }
+}
+
+function handleFileMetadata(ws, data) {
+  if (users[data.target]) {
+    users[data.target].send(JSON.stringify({
+      type: 'fileMetadata',
+      payload: data.payload,
+      sender: ws.name,
+      hash: data.hash,
+      sourceFolderPath: data.sourceFolderPath
+    }));
+  }
+}
+
+function handleFileChunk(ws, data) {
+  if (users[data.target]) {
+    users[data.target].send(JSON.stringify({
+      type: 'fileChunk',
+      payload: data.payload,
+      sender: ws.name,
+      hash: data.hash,
+      sourceFolderPath: data.sourceFolderPath
     }));
   }
 }
@@ -143,7 +174,8 @@ function handleRequest(ws, data) {
       type: 'request',
       sender: ws.name,
       filename: data.filename,
-      id: data.id
+      id: data.id,
+      sourceFolderPath: data.sourceFolderPath
     }));
   }
 }
